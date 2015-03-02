@@ -3,6 +3,7 @@
   Created by Nicholas Pitt, February 26, 2015.
   Released under the LGPL license.
 */
+
 #ifndef FileDB_H
 #define FileDB_H
 
