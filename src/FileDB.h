@@ -14,19 +14,18 @@ struct Entry {
   bool used;
 };
 
-template <class T>
+template <class T, size_t U>
 class FileDB {
 public:
   typedef bool Query(T &database_entry, T &query_entry);
   typedef void List(T &database_entry, void *data, size_t index);
 
-  FileDB(size_t database_size) : database_size_(database_size) {};
   bool open(char *file_path) {
     file_ = SD.open(file_path, FILE_WRITE);
-    if (file_.size() != database_size_ * sizeof(T)) {
+    if (file_.size() != U * sizeof(T)) {
       file_.close();
       file_ = SD.open(file_path, FILE_WRITE | O_TRUNC);
-      for (size_t i = 0; i < database_size_; i++) {
+      for (size_t i = 0; i < U; i++) {
         for (size_t j = 0; j < sizeof(T); j++) {
           file_.write((byte)'\0');
         }
@@ -41,7 +40,7 @@ public:
     T entry;
 
     file_.seek(0);
-    for (size_t i = 0; i < database_size_; i++) {
+    for (size_t i = 0; i < U; i++) {
       next(entry);
       if (!entry.used || query(entry, query_entry)) {
         file_.seek(i * sizeof(T));
@@ -57,7 +56,7 @@ public:
     T entry;
 
     file_.seek(0);
-    for (size_t i = 0; i < database_size_; i++) {
+    for (size_t i = 0; i < U; i++) {
       next(entry);
       if (entry.used && query(entry, query_entry)) {
         file_.seek(i * sizeof(T));
@@ -73,7 +72,7 @@ public:
     T entry;
 
     file_.seek(0);
-    for (size_t i = 0; i < database_size_; i++) {
+    for (size_t i = 0; i < U; i++) {
       next(entry);
       if (entry.used && query(entry, query_entry)) {
         query_entry = entry;
@@ -87,7 +86,7 @@ public:
     T entry;
 
     file_.seek(0);
-    for (int i = 0; i < database_size_; i++) {
+    for (int i = 0; i < U; i++) {
       next(entry);
       if (entry.used) {
         list(entry, data, index++);
@@ -99,7 +98,7 @@ public:
     T entry;
 
     file_.seek(0);
-    for (size_t i = 0; i < database_size_; i++) {
+    for (size_t i = 0; i < U; i++) {
       next(entry);
       if (entry.used) {
         count++;
@@ -109,7 +108,6 @@ public:
   }
 
 private:
-  const size_t database_size_;
   File file_;
 
   byte *raw(T &entry) { return (byte *)(&entry); }
