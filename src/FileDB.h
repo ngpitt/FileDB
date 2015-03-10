@@ -1,5 +1,5 @@
 /*
-  FileDB.h - Creates and manages a file-based database.
+  FileDB.h - Library for creating and managing file-based databases.
   Created by Nicholas Pitt, February 26, 2015.
   Released under the LGPL license.
 */
