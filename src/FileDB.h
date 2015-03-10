@@ -1,117 +1,125 @@
 /*
-  FileDB.h - Library for creating simple databases.
+  FileDB.h - Creates and manages a file-based database.
   Created by Nicholas Pitt, February 26, 2015.
   Released under the LGPL license.
 */
 
-#ifndef FileDB_H
-#define FileDB_H
+#ifndef FileDB_h
+#define FileDB_h
 
 #include "Arduino.h"
 #include "SD.h"
 
-struct Record
-{
-	bool used;
+struct Entry {
+  bool used;
 };
 
-template <class T, typename N>
-class FileDB
-{
-	public:
-		typedef bool KeysMatch(N *, N *);
+template <class T>
+class FileDB {
+public:
+  typedef bool Query(T &database_entry, T &query_entry);
+  typedef void List(T &database_entry, void *data, size_t index);
 
-		FileDB(int records, KeysMatch *keysMatch) : records(records), keysMatch(keysMatch) {};
+  FileDB(size_t database_size) : database_size_(database_size) {};
+  bool open(char *file_path) {
+    file_ = SD.open(file_path, FILE_WRITE);
+    if (file_.size() != database_size_ * sizeof(T)) {
+      file_.close();
+      file_ = SD.open(file_path, FILE_WRITE | O_TRUNC);
+      for (size_t i = 0; i < database_size_; i++) {
+        for (size_t j = 0; j < sizeof(T); j++) {
+          file_.write((byte)'\0');
+        }
+        file_.flush();
+      }
+      return false;
+    }
+    return true;
+  }
+  void close() { file_.close(); }
+  bool add(T &query_entry, Query &query) {
+    T entry;
 
-		bool begin(char *filePath)
-		{
-			file = SD.open(filePath, FILE_WRITE);
-			if (!file)
-			{
-				return false;
-			}
-			file.seek(0);
-			for (int i = 0; i < records; i++)
-			{
-				for (int j = 0; j < sizeof(T); j++)
-				{
-					file.write((byte)'\0');
-				}
-				file.flush();
-			}
-			return true;
-		}
+    file_.seek(0);
+    for (size_t i = 0; i < database_size_; i++) {
+      next(entry);
+      if (!entry.used || query(entry, query_entry)) {
+        file_.seek(i * sizeof(T));
+        query_entry.used = true;
+        file_.write(raw(query_entry), sizeof(T));
+        file_.flush();
+        return true;
+      }
+    }
+    return false;
+  }
+  bool remove(T &query_entry, Query &query) {
+    T entry;
 
-		bool add(T &newRecord)
-		{
-			T record;
+    file_.seek(0);
+    for (size_t i = 0; i < database_size_; i++) {
+      next(entry);
+      if (entry.used && query(entry, query_entry)) {
+        file_.seek(i * sizeof(T));
+        entry.used = false;
+        file_.write(raw(entry), sizeof(T));
+        file_.flush();
+        return true;
+      }
+    }
+    return false;
+  }
+  bool get(T &query_entry, Query &query) {
+    T entry;
 
-			file.seek(0);
-			for (int i = 0; i < records; i++)
-			{
-				next(record);
-				if (!record.used || keysMatch(record.key, newRecord.key))
-				{
-					file.seek(i * sizeof(T));
-					newRecord.used = true;
-					file.write(raw(newRecord), sizeof(T));
-					file.flush();
-					return true;
-				}
-			}
-			return false;
-		};
+    file_.seek(0);
+    for (size_t i = 0; i < database_size_; i++) {
+      next(entry);
+      if (entry.used && query(entry, query_entry)) {
+        query_entry = entry;
+        return true;
+      }
+    }
+    return false;
+  }
+  void list(void *data, List &list) {
+    size_t index = 0;
+    T entry;
 
-		bool get(N *key, T &record)
-		{
-			file.seek(0);
-			for (int i = 0; i < records; i++)
-			{
-				next(record);
-				if (record.used && keysMatch(record.key, key))
-				{
-					return true;
-				}
-			}
-			return false;
-		}
+    file_.seek(0);
+    for (int i = 0; i < database_size_; i++) {
+      next(entry);
+      if (entry.used) {
+        list(entry, data, index++);
+      }
+    }
+  }
+  size_t count() {
+    size_t count = 0;
+    T entry;
 
-		bool del(N *key)
-		{
-			T record;
+    file_.seek(0);
+    for (size_t i = 0; i < database_size_; i++) {
+      next(entry);
+      if (entry.used) {
+        count++;
+      }
+    }
+    return count;
+  }
 
-			file.seek(0);
-			for (int i = 0; i < records; i++)
-			{
-				next(record);
-				if (record.used && keysMatch(record.key, key))
-				{
-					file.seek(i * sizeof(T));
-					record.used = false;
-					file.write(raw(record), sizeof(T));
-					file.flush();
-					return true;
-				}
-			}
-			return false;
-		};
+private:
+  const size_t database_size_;
+  File file_;
 
-	private:
-		const int records;
-		KeysMatch *keysMatch;
-		File file;
+  byte *raw(T &entry) { return (byte *)(&entry); }
+  void next(T &entry) {
+    byte *raw_entry = raw(entry);
 
-		byte *raw(T &record) { return (byte *)(&record); }
-
-		void next(T &record)
-		{
-			byte *rawRecord = raw(record);
-
-			for (int i = 0; i < sizeof(T); i++)
-			{
-				rawRecord[i] = file.read();
-			}
-		};
+    for (size_t i = 0; i < sizeof(T); i++) {
+      raw_entry[i] = file_.read();
+    }
+  }
 };
 
 #endif

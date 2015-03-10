@@ -1,6 +1,6 @@
 = FileDB Library for Arduino =
 
-FileDB is designed for storing relational data in an easily accessible format with a minimal memory footprint. This library allows for saving multiple datatypes to a random I/O file and recall them via a pre-defined primary key.
+FileDB is designed for storing dynamic data to disk with a minimal memory footprint. This library operates by saving structs to a random I/O file and access them with programmer-defined queries.
 
 For more information about this library please visit us at
 http://github.com/ngpitt/FileDB

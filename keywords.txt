@@ -1,5 +1,5 @@
 #######################################
-# Syntax Coloring Map For HTTPRequest
+# Syntax Coloring Map For FileDB
 #######################################
 
 #######################################
@@ -12,10 +12,13 @@ FileDB	KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-begin	KEYWORD2
+open	KEYWORD2
+close	KEYWORD2
 add	KEYWORD2
+remove	KEYWORD2
 get	KEYWORD2
-del	KEYWORD2
+list	KEYWORD2
+count	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
